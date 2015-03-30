@@ -1,0 +1,112 @@
+#!/bin/ksh
+#=============================================================#
+# antonio.morales.ramirez.ext@juntadeandalucia.es             #
+# 2010/01/01                                                  #
+# v1. Script para obtener los caminos e informacisn           #
+# complementarma de una LUN                                   #
+# v2. Adaptado para cuando se reconfigura la SAN en caliente  #
+# v3. Se modifica por si hubiera mas de un almacenamiento     #
+# 2015/01/21 - v4. Se modifica para encuadrar la salida       #
+#=============================================================#
+
+DUMMY_FILE=/tmp/.puff
+DUMMY_FILE_SUB=/tmp/.puff1
+
+_comprueba_ctl () {
+`diskinfo ${1} 1> /dev/null  2> ${DUMMY_FILE}`
+echo $(grep "No such device" /tmp/.puff | wc -l)
+}
+
+_obtiene_dsf () {
+DSF=$(ioscan -m dsf ${1} | grep disk | awk '{print $1}')
+ENCONTRADO=`grep ${DSF} ${DUMMY_FILE} | wc -l`
+if [ "${ENCONTRADO}" = 0 ]; then
+        echo $DSF >> ${DUMMY_FILE}
+fi
+}
+
+_err_message () {
+echo "Numero de LUN incorrecto, no existe el dispositivo "
+}
+
+LUN=$1
+
+if [ -n "$1" ]; then
+        TARGET=$(expr ${LUN} \/ 8)
+        DEVICE=$(expr ${LUN} % 8)
+
+        CONT=0
+        for CONTROLADORA in $(ioscan -fnkC ext_bus | grep "Array Interface" | grep -v "NO_HW" | awk '{print $2}') ; do
+                DISCO="/dev/rdsk/c${CONTROLADORA}t${TARGET}d${DEVICE}"
+                if  [ 0 = $(_comprueba_ctl "${DISCO}") ]; then
+                        RDSK[${CONT}]=${DISCO}
+                        CONT=`expr ${CONT} + 1`
+		fi 
+			
+        done
+
+        touch ${DUMMY_FILE}
+        for X in "${RDSK[@]}"; do
+                if [ "`file ${X} | grep character |wc -l`" = "1" ]; then 
+                        $(_obtiene_dsf ${X})
+                fi
+        done
+
+        for DSF in $(cat ${DUMMY_FILE}); do
+
+        if [ 0 !=  $(ls -l ${DSF}| wc -l ) ]; then
+
+                TAM_DISK=$(diskinfo ${DSF} | awk '/size/ {TAM=$2} END{ printf "%-18s\n",TAM}'); TAM_DISK=`expr $TAM_DISK \/ 1024 \/ 1024`
+
+                                # WWID=$(scsimgr get_info -D ${DSF}| awk '/WWID/ {wwid=$NF} END{ printf "%-18s\n",wwid}')
+                                # POLICY=$(scsimgr get_info -D ${DSF} | awk '/load balance policy/ {lbp=$NF} END{ printf "%-18s\n",lbp}')
+
+                scsimgr get_info -D ${DSF} > $DUMMY_FILE_SUB
+                WWID=$(cat $DUMMY_FILE_SUB | grep "WWID" | awk '{print $NF}')
+                POLICY=$(cat $DUMMY_FILE_SUB | grep "load" | awk '{print $NF}')
+                VENDOR=$(cat $DUMMY_FILE_SUB | grep -i "Vendor" | sed 's/"//g' | awk '{print $NF}')
+
+                echo ""
+                echo ""
+                echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+                awk -v lun=${LUN} -v tam=${TAM_DISK} -v dsfPath=${DSF} -v policy=${POLICY} -v wwid=${WWID} -v vendor=${VENDOR} 'BEGIN {
+                printf "++ %-30s %-42s ++ \n", "", "";
+                printf "++ %-30s %-42s ++ \n", "==========", "==========";
+                printf "++ %-30s %-42s ++ \n", "Lun " lun, tam "GB";
+                printf "++ %-30s %-42s ++ \n", "Vendor ", vendor ;
+                printf "++ %-30s %-42s ++ \n", "==========", "==========";
+                printf "++ %-30s %-42s ++ \n", "I/O Policy", policy;
+                printf "++ %-30s %-42s ++ \n", "WWid", wwid;
+                printf "++ %-30s %-42s ++ \n", "==========", "=========="}'
+                echo "++                                                                           ++"
+                ioscan -m dsf ${DSF} > $DUMMY_FILE_SUB
+                while read line; do
+                awk -v vline="$line"  'BEGIN {
+                #FS="/";
+                if ( index(vline, "disk") != 0 )
+                # disco
+                printf "++ %-0s %-72s ++ \n", "",vline;
+                else if ( index(vline, "=") != 0)
+                #Separacion
+                printf "++ %-0s %-72s ++ \n", "",vline;
+                else if ( index(vline, "dsk") != 0 )
+                #Paths
+                printf "++ %-25s %-47s ++ \n", "",vline;
+                else
+                # Cabecera
+                printf "++ %-0s %-72s ++ \n", "",vline;
+                }'
+                                done < $DUMMY_FILE_SUB
+                echo "++                                                                           ++"
+                echo "++                                                                           ++"
+                echo "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+                echo ""
+                echo ""
+        else
+                echo "Numero de LUN incorrecto, no existe el dispositivo "
+        fi
+        done
+        rm -f $DUMMY_FILE $DUMMY_FILE_SUB
+else
+        echo "Usa queDisco <Lun>"
+fi
