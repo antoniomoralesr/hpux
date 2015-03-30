@@ -1,6 +1,7 @@
 #!/bin/ksh
 #=============================================================#
 # antonio.moralesr@gmail.com                                  #
+# Este script se distribuye bajo licencia GPL                 #
 # 2010/01/01                                                  #
 # v1. Script para obtener los caminos e informacisn           #
 # complementarma de una LUN                                   #

@@ -1,9 +1,10 @@
 #!/bin/ksh
 #=============================================================#
 # antonio.moralesr@gmail.com                                  #
+# Este script se distribuye bajo licencia GPL                 #
 # 2011/03/23                                                  #
 # v1. Script para obtener la configuración de los paquetes    #
-# y del cluster                                               #
+# y del cluster SG                                            #
 #=============================================================#
 
 FECHA=`date +%Y%m%d`
