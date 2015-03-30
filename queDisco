@@ -1,6 +1,6 @@
 #!/bin/ksh
 #=============================================================#
-# antonio.morales.ramirez.ext@juntadeandalucia.es             #
+# antonio.moralesr@gmail.com                                  #
 # 2010/01/01                                                  #
 # v1. Script para obtener los caminos e informacisn           #
 # complementarma de una LUN                                   #
@@ -58,8 +58,6 @@ if [ -n "$1" ]; then
 
                 TAM_DISK=$(diskinfo ${DSF} | awk '/size/ {TAM=$2} END{ printf "%-18s\n",TAM}'); TAM_DISK=`expr $TAM_DISK \/ 1024 \/ 1024`
 
-                                # WWID=$(scsimgr get_info -D ${DSF}| awk '/WWID/ {wwid=$NF} END{ printf "%-18s\n",wwid}')
-                                # POLICY=$(scsimgr get_info -D ${DSF} | awk '/load balance policy/ {lbp=$NF} END{ printf "%-18s\n",lbp}')
 
                 scsimgr get_info -D ${DSF} > $DUMMY_FILE_SUB
                 WWID=$(cat $DUMMY_FILE_SUB | grep "WWID" | awk '{print $NF}')

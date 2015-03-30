@@ -1,6 +1,6 @@
 #!/bin/ksh
 #=============================================================#
-# antonio.morales.ramirez.ext@juntadeandalucia.es             #
+# antonio.moralesr@gmail.com                                  #
 # 2011/03/23                                                  #
 # v1. Script para obtener la configuración de los paquetes    #
 # y del cluster                                               #
